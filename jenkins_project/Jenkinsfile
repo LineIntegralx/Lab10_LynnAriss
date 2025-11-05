@@ -24,7 +24,7 @@ pipeline {
             steps {
                 script {
                     // Run flake8 to lint the code
-                    bat "call ${VIRTUAL_ENV}\\Scripts\\activate && flake8 app.py"
+                    bat "call ${VIRTUAL_ENV}\\Scripts\\activate && flake8 jenkins_project\\app.py"
                 }
             }
         }
