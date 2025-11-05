@@ -71,8 +71,12 @@ pipeline {
             steps {
                 script {
                     echo "Deploying application..."
-                    //local deployment
-                    bat 'deploy.bat' 
+                    // local deployment - only run if deploy.bat exists
+                    if (fileExists("${env.WORKSPACE}\\deploy.bat")) {
+                        bat "call ${env.WORKSPACE}\\deploy.bat"
+                    } else {
+                        echo "deploy.bat not found in workspace; skipping deploy stage."
+                    }
                 }
             }
         }
