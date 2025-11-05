@@ -36,8 +36,9 @@ pipeline {
                     bat """
                         cd ${env.WORKSPACE}  # Go to the root directory
                         call ${VIRTUAL_ENV}\\Scripts\\activate
-                        set PYTHONPATH=%CD% 
-                        pytest tests\\test_app.py -v --tb=short
+                        REM Add the jenkins_project folder to PYTHONPATH so tests can import app
+                        set PYTHONPATH=%CD%\\jenkins_project
+                        pytest jenkins_project\\tests\\test_app.py -v --tb=short
                     """
                 }
             }
@@ -49,7 +50,8 @@ pipeline {
                     // Run coverage to track test coverage
                     bat """
                         call ${VIRTUAL_ENV}\\Scripts\\activate
-                        coverage run -m pytest tests\\test_app.py
+                        set PYTHONPATH=%CD%\\jenkins_project
+                        coverage run -m pytest jenkins_project\\tests\\test_app.py
                         coverage report  
                     """
                 }
@@ -60,7 +62,7 @@ pipeline {
             steps {
                 script {
                     // Run bandit to check for security vulnerabilities
-                    bat "call ${VIRTUAL_ENV}\\Scripts\\activate && bandit -r app.py"
+                    bat "call ${VIRTUAL_ENV}\\Scripts\\activate && bandit -r jenkins_project\\app.py"
                 }
             }
         }
