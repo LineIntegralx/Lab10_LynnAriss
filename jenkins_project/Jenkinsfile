@@ -14,7 +14,8 @@ pipeline {
                         bat "python -m venv ${VIRTUAL_ENV}"  // Create virtual environment
                     }
                     // Activate the virtual environment and install required packages from requirements.txt
-                    bat "call ${VIRTUAL_ENV}\\Scripts\\activate && pip install -r requirements.txt"
+                    bat "call ${VIRTUAL_ENV}\\Scripts\\activate && pip install -r jenkins_project\\requirements.txt"
+
                 }
             }
         }
