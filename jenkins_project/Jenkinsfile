@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    parameters {
+        booleanParam(name: 'SKIP_DEPLOY', defaultValue: true, description: 'If true, skip deploy stage')
+    }
+
     environment {
         VIRTUAL_ENV = 'venv'  // Define virtual environment name
     }
@@ -32,14 +36,17 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // Ensure we're in the correct working directory before running tests
+                    // Ensure we're in the correct working directory before running tests and produce JUnit XML for Jenkins
                     bat """
-                        cd ${env.WORKSPACE}  # Go to the root directory
+                        cd ${env.WORKSPACE}
                         call ${VIRTUAL_ENV}\\Scripts\\activate
-                        REM Add the jenkins_project folder to PYTHONPATH so tests can import app
                         set PYTHONPATH=%CD%\\jenkins_project
-                        pytest jenkins_project\\tests\\test_app.py -v --tb=short
+                        pytest jenkins_project\\tests\\test_app.py -v --tb=short --junitxml=jenkins_project\\tests\\report.xml
                     """
+                    // Publish test results to Jenkins
+                    junit 'jenkins_project/tests/report.xml'
+                    // Archive the test report XML as a build artifact
+                    archiveArtifacts artifacts: 'jenkins_project/tests/report.xml', fingerprint: true
                 }
             }
         }
@@ -47,13 +54,16 @@ pipeline {
         stage('Coverage') {
             steps {
                 script {
-                    // Run coverage to track test coverage
+                    // Run coverage to track test coverage and produce XML/HTML
                     bat """
                         call ${VIRTUAL_ENV}\\Scripts\\activate
                         set PYTHONPATH=%CD%\\jenkins_project
                         coverage run -m pytest jenkins_project\\tests\\test_app.py
-                        coverage report  
+                        coverage xml -o jenkins_project\\coverage.xml
+                        coverage html -d jenkins_project\\htmlcov
                     """
+                    // Archive coverage artifacts so they are available from the build page
+                    archiveArtifacts artifacts: 'jenkins_project/coverage.xml, jenkins_project/htmlcov/**', fingerprint: true
                 }
             }
         }
@@ -71,11 +81,15 @@ pipeline {
             steps {
                 script {
                     echo "Deploying application..."
-                    // local deployment - only run if deploy.bat exists
-                    if (fileExists("${env.WORKSPACE}\\deploy.bat")) {
-                        bat "call ${env.WORKSPACE}\\deploy.bat"
+                    if (params.SKIP_DEPLOY.toBoolean()) {
+                        echo "SKIP_DEPLOY is true — skipping deploy stage."
                     } else {
-                        echo "deploy.bat not found in workspace; skipping deploy stage."
+                        // only run deploy if the deploy script exists
+                        if (fileExists("${env.WORKSPACE}\\deploy.bat")) {
+                            bat "call ${env.WORKSPACE}\\deploy.bat"
+                        } else {
+                            error "deploy.bat not found and SKIP_DEPLOY is false — aborting deploy"
+                        }
                     }
                 }
             }
